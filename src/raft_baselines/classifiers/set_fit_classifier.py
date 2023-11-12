@@ -7,7 +7,7 @@ from collections import defaultdict
 import json
 import importlib.resources
 from sentence_transformers import losses
-
+from pathlib import Path
 
 import numpy as np
 import datasets
@@ -22,6 +22,8 @@ text_data = importlib.resources.read_text(
 ).split("\n")
 FIELD_ORDERING = json.loads(text_data[0])
 INSTRUCTIONS = json.loads(text_data[1])
+
+PRE_SAVED_MODELS = ["banking_77", "systematic_review_inclusion"]
 
 class SetFitClassifier(Classifier):
     separator: str = "\n\n"
@@ -38,6 +40,7 @@ class SetFitClassifier(Classifier):
         num_epochs: int = 1,
         num_iterations: int = 20,
         max_tokens: int = 512,
+        **kwargs,
     ) -> None:
         super().__init__(training_data)
         if model_head == SetFitHead:
@@ -50,24 +53,32 @@ class SetFitClassifier(Classifier):
             raise ValueError("model_head must be a SetFitHead or a sklearn classifier")
             
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = SetFitModel.from_pretrained(
-            model_type, 
-            use_differentiable_head=use_differentiable_head, 
-            non_differentiable_model_head=non_differentiable_model_head) \
-        .to(self.device)
         
-        self.model.model_body.max_seq_length = max_tokens
-        
-        self.trainer = SetFitTrainer(
-            model=self.model,
-            train_dataset=self.format_training_data(training_data),
-            loss_class=loss_class,
-            batch_size=batch_size,
-            num_epochs=num_epochs,
-            num_iterations=num_iterations,
-        )
-        
-        self.trainer.train()
+        if config in PRE_SAVED_MODELS and Path(__file__).parent.parent.joinpath("models", config).exists():
+            self.model = SetFitModel.from_pretrained(
+                Path(__file__).parent.parent.joinpath("models", config), 
+                use_differentiable_head=use_differentiable_head, 
+                non_differentiable_model_head=non_differentiable_model_head) \
+            .to(self.device)
+        else:  
+            self.model = SetFitModel.from_pretrained(
+                model_type, 
+                use_differentiable_head=use_differentiable_head, 
+                non_differentiable_model_head=non_differentiable_model_head) \
+            .to(self.device)
+            
+            self.model.model_body.max_seq_length = max_tokens
+            
+            self.trainer = SetFitTrainer(
+                model=self.model,
+                train_dataset=self.format_training_data(training_data),
+                loss_class=loss_class,
+                batch_size=batch_size,
+                num_epochs=num_epochs,
+                num_iterations=num_iterations,
+            )
+            
+            self.trainer.train()
         
         if config:
             self.config: str = config

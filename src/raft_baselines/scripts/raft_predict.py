@@ -37,7 +37,7 @@ NUM_EXAMPLES = {
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "GPT3Classifier"
+    classifier_name = "SetFitClassifier"
     classifier_kwargs = {
         # change to davinci to replicate results from the paper
         # "engine": "ada",
@@ -61,7 +61,7 @@ def base_config():
 
     configs = datasets.get_dataset_config_names("ought/raft")
     # set n_test to -1 to run on all test examples
-    n_test = 5
+    n_test = -1
     random_seed = 42
     zero_shot = False
 
