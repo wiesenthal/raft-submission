@@ -12,15 +12,21 @@ raft_experiment.observers.append(observer)
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "GPT3Classifier"
+    classifier_name = "ChatGPTClassifier"
     classifier_kwargs = {
         # change to davinci to replicate results from the paper
-        "engine": "ada",
+        "model": "gpt-3.5-turbo-1106",
     }
-    configs = datasets.get_dataset_config_names("ought/raft")
+    configs = [
+        "banking_77",
+        "one_stop_english",
+        "tweet_eval_hate",
+        "twitter_complaints",
+        ""
+    ]
     # controls which dimension is tested, out of the 3 reported in the paper
     # Other options: do_semantic_selection and num_prompt_training_examples
-    test_dimension = "use_task_specific_instructions"
+    test_dimension = "do_semantic_selection"
     random_seed = 42
 
 
@@ -57,6 +63,14 @@ def loo_test(
         other_dim_kwargs = {
             "use_task_specific_instructions": True,
             "do_semantic_selection": True,
+            
+        }
+    elif test_dimension == "similarity_embedder_type":
+        dim_values = ["sentence_transformers", "openai"]
+        other_dim_kwargs = {
+            "use_task_specific_instructions": True,
+            "do_semantic_selection": True,
+            "num_prompt_training_examples": 20,
         }
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")

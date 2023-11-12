@@ -1,9 +1,7 @@
 import openai
 import time
 from cachetools import cached, LRUCache
-from typing import Dict, Tuple, Any, cast
-import tiktoken
-
+from typing import Dict, Tuple, Any, cast, List
 
 @cached(cache=LRUCache(maxsize=1e9))
 def complete(
@@ -49,3 +47,48 @@ def complete(
                 time.sleep(retries * 15)
 
     return cast(Dict[str, Any], response)
+
+# @cached(cache=LRUCache(maxsize=1e9))
+def chat_complete(
+    prompt: List[Dict[str, str]],
+    model: str = "gpt-3.5-turbo",
+    max_tokens: int = 5,
+    temperature: float = 1.0,
+    top_p: float = 1.0,
+    n: int = 1,
+    stop: Tuple[str, ...] = ("\n",),
+    frequency_penalty: float = 0.0,
+    presence_penalty: float = 0.0,
+    logit_bias: Dict[str, float] = None,
+):
+    openai_completion_args = dict(
+        model=model,
+        messages=prompt,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        n=n,
+        stop=stop,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
+        logit_bias=logit_bias
+    )
+    
+    success = False
+    retries = 0
+    while not success:
+        try:
+            response = openai.chat.completions.create(**openai_completion_args)
+            success = True
+        except Exception as e:
+            print(f"Exception in OpenAI completion: {e}")
+            retries += 1
+            if retries > 3:
+                raise Exception("Max retries reached")
+                break
+            else:
+                print("retrying")
+                time.sleep(retries * 15)
+
+    return cast(Dict[str, Any], response)
+    

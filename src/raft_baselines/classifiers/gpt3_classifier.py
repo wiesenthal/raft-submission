@@ -10,7 +10,7 @@ from raft_baselines.utils.gpt3_utils import (
     complete,
 )
 from raft_baselines.utils.tokenizers import TransformersTokenizer
-from raft_baselines.utils.embedders import OpenAIEmbedder
+from raft_baselines.utils.embedders import OpenAIEmbedder, SentenceTransformersEmbedder
 
 GPT3_MAX_TOKENS = 2048
 tokenizer = TransformersTokenizer("gpt2")
@@ -21,11 +21,15 @@ class GPT3Classifier(InContextClassifier):
         self,
         *args,
         model: str = "ada",
+        similarity_embedder_type: str = "openai", # | "sentence_transformers",
         **kwargs,
     ) -> None:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model: str = model
-        self.similarity_embedder = OpenAIEmbedder(max_tokens=GPT3_MAX_TOKENS)
+        if similarity_embedder_type == "sentence_transformers":
+            self.similarity_embedder = SentenceTransformersEmbedder()
+        elif similarity_embedder_type == "openai":
+            self.similarity_embedder = OpenAIEmbedder(max_tokens=GPT3_MAX_TOKENS)
         super().__init__(
             *args,
             tokenizer=tokenizer,
