@@ -1,5 +1,8 @@
 import datasets
 from sacred import Experiment, observers
+from setfit.modeling import SetFitHead
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 import sklearn.metrics as skm
 
 from raft_baselines import classifiers
@@ -12,22 +15,15 @@ raft_experiment.observers.append(observer)
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "ChatGPTClassifier"
+    classifier_name = "SetFitClassifier"
     classifier_kwargs = {
-        # change to davinci to replicate results from the paper
-        "model": "gpt-3.5-turbo-1106",
+        "model_type": "all-mpnet-base-v2",
     }
-    configs = [
-        "banking_77",
-        "one_stop_english",
-        "tweet_eval_hate",
-        "twitter_complaints",
-        ""
-    ]
+    configs = datasets.get_dataset_config_names("ought/raft")
     # controls which dimension is tested, out of the 3 reported in the paper
     # Other options: do_semantic_selection and num_prompt_training_examples
-    test_dimension = "do_semantic_selection"
-    random_seed = 42
+    test_dimension = "model_head"
+    random_seed = 43
 
 
 @raft_experiment.capture
@@ -71,6 +67,11 @@ def loo_test(
             "use_task_specific_instructions": True,
             "do_semantic_selection": True,
             "num_prompt_training_examples": 20,
+        }
+    elif test_dimension == "model_head":
+        dim_values = [RandomForestClassifier, LogisticRegression, SetFitHead]
+        other_dim_kwargs = {
+            
         }
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")

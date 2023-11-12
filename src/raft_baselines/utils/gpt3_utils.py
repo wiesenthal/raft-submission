@@ -2,6 +2,8 @@ import openai
 import time
 from cachetools import cached, LRUCache
 from typing import Dict, Tuple, Any, cast, List
+from dotenv import load_dotenv
+load_dotenv()
 
 @cached(cache=LRUCache(maxsize=1e9))
 def complete(

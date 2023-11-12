@@ -3,7 +3,8 @@ from typing import List
 from transformers import AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
 import tiktoken
-
+from dotenv import load_dotenv
+load_dotenv()
 
 class Tokenizer(ABC):
     @abstractmethod

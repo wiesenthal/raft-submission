@@ -6,3 +6,4 @@ from .svm_classifier import SVMClassifier
 from .adaboost_classifier import AdaBoostClassifier
 from .zero_shot_transformers_classifier import TransformersZeroShotPipelineClassifier
 from .chat_gpt_classifier import ChatGPTClassifier
+from .set_fit_classifier import SetFitClassifier
