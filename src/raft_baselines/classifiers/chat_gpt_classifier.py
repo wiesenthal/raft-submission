@@ -4,6 +4,7 @@ import numpy as np
 import datasets
 from sentence_transformers import util
 import torch
+from collections import defaultdict
 
 from raft_baselines.classifiers.in_context_classifier import InContextClassifier
 from raft_baselines.utils.gpt3_utils import (
@@ -21,8 +22,10 @@ class ChatGPTClassifier(InContextClassifier):
         *args,
         model: str = "gpt-3.5-turbo-1106",
         similarity_embedder_type: str = "openai", # | "sentence_transformers",
+        num_responses: int = 1,
         **kwargs,
     ) -> None:
+        self.num_responses = num_responses
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model: str = model
         if similarity_embedder_type == "sentence_transformers":
@@ -181,16 +184,20 @@ class ChatGPTClassifier(InContextClassifier):
             model=self.model,
             max_tokens=1,
             logit_bias=logit_bias,
+            n=self.num_responses,
         )
         
-        content: str = response.choices[0].message.content
-        # token is the first token in the response
-
+        choice_count: Mapping[str, int] = defaultdict(int)
+        num_choices = len(response.choices)
+        for choice in response.choices:
+            choice_count[choice.message.content] += 1
+        
         raw_p = []
         for clas in self.classes:
             p = 0.0
-            if self.does_token_match_class(content, clas):
-                p = 1.0
+            for choice, count in choice_count.items():
+                if self.does_token_match_class(choice, clas):
+                    p += count / num_choices
             raw_p.append(p)
 
         return raw_p
