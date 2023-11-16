@@ -32,7 +32,7 @@ class SetFitClassifier(Classifier):
         self,
         training_data: datasets.Dataset,
         config: str = None,
-        model_type: str = "sentence-transformers/all-mpnet-base-v2",
+        model_type: str = "sentence-transformers/paraphrase-mpnet-base-v2",
         model_head: Optional[Union[SetFitHead, LogisticRegression, RandomForestClassifier]] = LogisticRegression,
         # Training params
         loss_class: Optional[torch.nn.Module] = losses.CosineSimilarityLoss,

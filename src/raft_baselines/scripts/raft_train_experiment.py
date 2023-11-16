@@ -1,9 +1,13 @@
+import json
+import os
+import shutil
 import datasets
 from sacred import Experiment, observers
 from setfit.modeling import SetFitHead
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 import sklearn.metrics as skm
+from collections import defaultdict
 
 from raft_baselines import classifiers
 
@@ -17,7 +21,7 @@ raft_experiment.observers.append(observer)
 def base_config():
     classifier_name = "SetFitClassifier"
     classifier_kwargs = {
-        "model_type": "all-mpnet-base-v2",
+        "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
     configs = datasets.get_dataset_config_names("ought/raft")
     # controls which dimension is tested, out of the 3 reported in the paper
@@ -70,20 +74,22 @@ def loo_test(
         }
     elif test_dimension == "model_head":
         dim_values = [RandomForestClassifier, LogisticRegression, SetFitHead]
-        other_dim_kwargs = {
-            
-        }
+        other_dim_kwargs = {}
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")
 
     classifier_cls = getattr(classifiers, classifier_name)
+    
+    test_output = defaultdict(dict)
 
     for config in train_datasets:
         for dim_value in dim_values:
             dataset = train_datasets[config]
             labels = list(range(1, dataset.features["Label"].num_classes))
             predictions = []
-
+            
+            test_output[config][dim_value] = {}
+            
             extra_kwargs = {
                 "config": config,
                 test_dimension: dim_value,
@@ -99,11 +105,15 @@ def loo_test(
                 classifier = classifier_cls(train, **classifier_kwargs, **extra_kwargs)
 
                 def predict(example):
+                    id = example["ID"]
+                    label = example["Label"]
                     del example["Label"]
                     del example["ID"]
                     output_probs = classifier.classify(example, random_seed=random_seed)
                     output = max(output_probs.items(), key=lambda kv_pair: kv_pair[1])
-
+                    
+                    test_output[config][dim_value][id] = make_output_entry(label, output_probs, output)
+                    
                     predictions.append(dataset.features["Label"].str2int(output[0]))
 
                 test.map(predict)
@@ -115,6 +125,25 @@ def loo_test(
             print(f"Dataset - {config}; {test_dimension} - {dim_value}: {f1}")
             raft_experiment.log_scalar(f"{config}.{dim_value}", f1)
 
+    save_output(test_output, classifier_name, test_dimension)
+
+def make_output_entry(label, output_probs, output):
+    return {
+        "label": label,
+        "output_probs": output_probs,
+        "output": output,
+    }
+    
+def save_output(test_output, classifier_name, test_dimension):
+    # get file from observer
+    dir = os.path.join(observer.dir, "test_outputs", classifier_name, test_dimension)
+    if os.path.isdir(dir):
+        shutil.rmtree(dir)
+    os.makedirs(dir)
+    
+    for config in test_output:
+        with open(os.path.join(dir, f"{config}.json"), "w") as f:
+            json.dump(test_output[config], f)
 
 @raft_experiment.automain
 def main():
