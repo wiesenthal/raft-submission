@@ -21,13 +21,17 @@ raft_experiment.observers.append(observer)
 def base_config():
     classifier_name = "SetFitClassifier"
     classifier_kwargs = {
-        # "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
+        "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
     configs = datasets.get_dataset_config_names("ought/raft")
+    configs.remove("ade_corpus_v2")
+    configs.remove("banking_77")
+    configs.remove("terms_of_service")
+    
     # controls which dimension is tested, out of the 3 reported in the paper
     # Other options: do_semantic_selection and num_prompt_training_examples
-    test_dimension = "model_type"
-    random_seed = 43
+    test_dimension = "model_head"
+    random_seed = 42
 
 
 @raft_experiment.capture
@@ -73,10 +77,10 @@ def loo_test(
             "num_prompt_training_examples": 20,
         }
     elif test_dimension == "model_head":
-        dim_values = [RandomForestClassifier, LogisticRegression, SetFitHead]
+        dim_values = [RandomForestClassifier, LogisticRegression]
         other_dim_kwargs = {}
     elif test_dimension == "model_type":
-        dim_values = ["all-roberta-large-v1", "sentence-transformers/paraphrase-mpnet-base-v2", "all-mpnet-base-v2"]
+        dim_values = ["sentence-transformers/all-roberta-large-v1", "sentence-transformers/paraphrase-mpnet-base-v2", "sentence-transformers/all-mpnet-base-v2"]
         other_dim_kwargs = {}
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")
@@ -136,10 +140,9 @@ def make_output_entry(label, output_probs, output):
 
 def save_output(test_output, config, dim_value):
     # get file from observer
-    dir = os.path.join(observer.dir, "test_outputs", dim_value)
-    if os.path.isdir(dir):
-        shutil.rmtree(dir)
-    os.makedirs(dir)
+    dir = os.path.join(observer.dir, "test_outputs", str(dim_value))
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
     
     with open(os.path.join(dir, f"{config}.json"), "w") as f:
         json.dump(test_output, f)

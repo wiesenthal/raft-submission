@@ -1,6 +1,7 @@
 import os
 import shutil
 import csv
+import json
 
 import datasets
 from sacred import Experiment, observers
@@ -41,6 +42,7 @@ def base_config():
     classifier_kwargs = {
         # change to davinci to replicate results from the paper
         # "engine": "ada",
+        "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
     if classifier_name in ('NaiveBayesClassifier', 'SVMClassifier', 'AdaBoostClassifier'):
         classifier_kwargs = {
@@ -105,6 +107,8 @@ def make_predictions(
 
     if n_test > -1:
         test_dataset = test_dataset.select(range(n_test))
+        
+    test_output = {}
 
     def predict(example):
         del example["Label"]
@@ -112,9 +116,12 @@ def make_predictions(
         output = max(output_probs.items(), key=lambda kv_pair: kv_pair[1])
 
         example["Label"] = train_dataset.features["Label"].str2int(output[0])
+        test_output[example["ID"]] = make_output_entry(example["Label"], output_probs, output)
         return example
 
-    return test_dataset.map(predict, load_from_cache_file=False)
+    result = test_dataset.map(predict, load_from_cache_file=False)
+    save_output(test_output, extra_kwargs["config"])
+    return result
 
 
 def log_text(text, dirname, filename):
@@ -155,6 +162,21 @@ def write_predictions(labeled, config):
         for row in labeled:
             writer.writerow([row["ID"], int2str(row["Label"])])
 
+def make_output_entry(label, output_probs, output):
+    return {
+        "predicted_label": label,
+        "output_probs": output_probs,
+        "output": output,
+    }
+
+def save_output(test_output, config):
+    # get file from observer
+    dir = os.path.join(observer.dir, "test_outputs")
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    
+    with open(os.path.join(dir, f"{config}.json"), "w") as f:
+        json.dump(test_output, f)
 
 @raft_experiment.automain
 def main(classifier_name):
