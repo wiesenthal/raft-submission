@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: combined-package
+Version: 0.1.0
+Summary: Combined package for RAFT Benchmarks baselines and SetFit
+Keywords: nlp,machine learning,fewshot learning,transformers,benchmarks,baselines
+Classifier: Development Status :: 1 - Planning
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Education
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.7.0
+Provides-Extra: optuna
+Provides-Extra: quality
+Provides-Extra: tests
+Provides-Extra: onnx
+Provides-Extra: openvino
+Provides-Extra: docs
+Provides-Extra: dev
+Provides-Extra: compat_tests
+License-File: LICENSE

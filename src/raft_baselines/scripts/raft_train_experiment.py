@@ -1,6 +1,13 @@
+import json
+import os
+import shutil
 import datasets
 from sacred import Experiment, observers
+from setfit.modeling import SetFitHead
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 import sklearn.metrics as skm
+from collections import defaultdict
 
 from raft_baselines import classifiers
 
@@ -12,15 +19,18 @@ raft_experiment.observers.append(observer)
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "GPT3Classifier"
+    classifier_name = "ChatGPTClassifier"
     classifier_kwargs = {
-        # change to davinci to replicate results from the paper
-        "engine": "ada",
+        "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
     configs = datasets.get_dataset_config_names("ought/raft")
+    configs.remove("ade_corpus_v2")
+    configs.remove("banking_77")
+    configs.remove("terms_of_service")
+    
     # controls which dimension is tested, out of the 3 reported in the paper
     # Other options: do_semantic_selection and num_prompt_training_examples
-    test_dimension = "use_task_specific_instructions"
+    test_dimension = "model_head"
     random_seed = 42
 
 
@@ -53,10 +63,31 @@ def loo_test(
             "num_prompt_training_examples": 20,
         }
     elif test_dimension == "num_prompt_training_examples":
-        dim_values = [5, 10, 25, 49]
+        dim_values = [10, 15, 20]
         other_dim_kwargs = {
             "use_task_specific_instructions": True,
             "do_semantic_selection": True,
+            
+        }
+    elif test_dimension == "similarity_embedder_type":
+        dim_values = ["sentence_transformers", "openai"]
+        other_dim_kwargs = {
+            "use_task_specific_instructions": True,
+            "do_semantic_selection": True,
+            "num_prompt_training_examples": 20,
+        }
+    elif test_dimension == "model_head":
+        dim_values = [RandomForestClassifier, LogisticRegression]
+        other_dim_kwargs = {}
+    elif test_dimension == "model_type":
+        dim_values = ["sentence-transformers/all-roberta-large-v1", "sentence-transformers/paraphrase-mpnet-base-v2", "sentence-transformers/all-mpnet-base-v2"]
+        other_dim_kwargs = {}
+    elif test_dimension == "model":
+        dim_values = ["gpt-4-1106-preview"] # "gpt-3.5-turbo-1106"
+        other_dim_kwargs = {
+            "use_task_specific_instructions": True,
+            "do_semantic_selection": False,
+            "num_prompt_training_examples": 20,
         }
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")
@@ -68,7 +99,11 @@ def loo_test(
             dataset = train_datasets[config]
             labels = list(range(1, dataset.features["Label"].num_classes))
             predictions = []
-
+            test_output = {}
+            
+            if config == "one_stop_english":
+                other_dim_kwargs["num_prompt_training_examples"] = 10
+                        
             extra_kwargs = {
                 "config": config,
                 test_dimension: dim_value,
@@ -84,11 +119,15 @@ def loo_test(
                 classifier = classifier_cls(train, **classifier_kwargs, **extra_kwargs)
 
                 def predict(example):
+                    id = example["ID"]
+                    label = example["Label"]
                     del example["Label"]
                     del example["ID"]
                     output_probs = classifier.classify(example, random_seed=random_seed)
                     output = max(output_probs.items(), key=lambda kv_pair: kv_pair[1])
-
+                    
+                    test_output[id] = make_output_entry(label, output_probs, output)
+                    
                     predictions.append(dataset.features["Label"].str2int(output[0]))
 
                 test.map(predict)
@@ -100,6 +139,26 @@ def loo_test(
             print(f"Dataset - {config}; {test_dimension} - {dim_value}: {f1}")
             raft_experiment.log_scalar(f"{config}.{dim_value}", f1)
 
+            save_output(test_output, config, dim_value)
+
+def make_output_entry(label, output_probs, output):
+    return {
+        "label": label,
+        "output_probs": output_probs,
+        "output": output,
+    }
+
+def save_output(test_output, config, dim_value):
+    # get file from observer
+    dir = os.path.join(observer.dir, "test_outputs", str(dim_value))
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    dir = os.path.join(observer.dir, "test_outputs", str(dim_value))
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
+    
+    with open(os.path.join(dir, f"{config}.json"), "w") as f:
+        json.dump(test_output, f)
 
 @raft_experiment.automain
 def main():

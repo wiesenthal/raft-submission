@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from typing import List
 from transformers import AutoTokenizer
 from transformers.tokenization_utils_base import BatchEncoding
-
+import tiktoken
+from dotenv import load_dotenv
+load_dotenv()
 
 class Tokenizer(ABC):
     @abstractmethod
@@ -32,3 +34,23 @@ class TransformersTokenizer(Tokenizer):
         )
 
         return text[: encoding.offset_mapping[-1][1]]
+
+
+# uses tiktoken
+class GPTTokenizer(Tokenizer):
+    def __init__(self, model_name):
+        self.model_name = model_name
+        self.tokenizer = tiktoken.encoding_for_model(model_name)
+        
+    def __call__(self, *args, **kwargs) -> BatchEncoding:
+        return self.tokenizer.encode(*args, **kwargs)
+    
+    def num_tokens(self, text: str) -> int:
+        return len(self.tokenizer.encode(text))
+    
+    def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
+        # TODO: make this function actually work
+        return text
+
+    def decode(self, *args, **kwargs) -> str:
+        return self.tokenizer.decode(*args, **kwargs)
