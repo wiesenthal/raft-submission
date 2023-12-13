@@ -1,3 +1,21 @@
+# What is RAFT
+
+RAFT is a few-shot classification benchmark that tests language models:
+
+- across multiple domains (lit review, tweets, customer interaction, etc.)
+- on economically valuable classification tasks (someone inherently cares about the task)
+- in a setting that mirrors deployment (50 examples per task, info retrieval allowed, hidden test set)
+
+# My Approach
+
+I implemented a modified version of SetFit that uses RandomForestClassifier as its model head (which slightly improved cross-validation performance) along with T-Few models I trained.
+I compared the predictions from the modified SetFit and the T-Few models and  
+- if they agreed: I used the prediction as is
+- if they disagreed: I used my GPT classifier implementation with GPT-4 as the tiebreaker (using in-context learning with the message history created out of the training examples)
+
+This approach essentially takes a vote between the three classifiers which I found to significantly improve performance in cross-validation. Plus, it saves me money in openAI credits.
+
+
 # Setup
 
 This is the repository for the GPT-3 baselines described in the RAFT benchmark paper.
