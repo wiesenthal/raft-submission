@@ -40,7 +40,7 @@ class TransformersTokenizer(Tokenizer):
 class GPTTokenizer(Tokenizer):
     def __init__(self, model_name):
         self.model_name = model_name
-        self.tokenizer = tiktoken.encoding_for_model(model_name)
+        self.tokenizer:tiktoken.Encoding = tiktoken.encoding_for_model(model_name)
         
     def __call__(self, *args, **kwargs) -> BatchEncoding:
         return self.tokenizer.encode(*args, **kwargs)
@@ -49,8 +49,10 @@ class GPTTokenizer(Tokenizer):
         return len(self.tokenizer.encode(text))
     
     def truncate_by_tokens(self, text: str, max_tokens: int) -> str:
-        # TODO: make this function actually work
-        return text
+        if max_tokens is None or not text:
+            return text
+        encoding = self.tokenizer.encode(text)
+        return text[: encoding[max_tokens]]
 
     def decode(self, *args, **kwargs) -> str:
         return self.tokenizer.decode(*args, **kwargs)
