@@ -56,8 +56,6 @@ class GPT3Classifier(InContextClassifier):
             0
         ]
         
-        print(self.device)
-
         sorted_indices = torch.argsort(-similarity_scores.to(self.device))
         return self.training_data.select(
             list(reversed(sorted_indices[: self.num_prompt_training_examples]))

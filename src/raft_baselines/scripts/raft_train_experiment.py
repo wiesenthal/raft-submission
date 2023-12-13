@@ -19,7 +19,7 @@ raft_experiment.observers.append(observer)
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "SetFitClassifier"
+    classifier_name = "ChatGPTClassifier"
     classifier_kwargs = {
         "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
@@ -63,7 +63,7 @@ def loo_test(
             "num_prompt_training_examples": 20,
         }
     elif test_dimension == "num_prompt_training_examples":
-        dim_values = [5, 10, 25, 49]
+        dim_values = [10, 15, 20]
         other_dim_kwargs = {
             "use_task_specific_instructions": True,
             "do_semantic_selection": True,
@@ -82,6 +82,13 @@ def loo_test(
     elif test_dimension == "model_type":
         dim_values = ["sentence-transformers/all-roberta-large-v1", "sentence-transformers/paraphrase-mpnet-base-v2", "sentence-transformers/all-mpnet-base-v2"]
         other_dim_kwargs = {}
+    elif test_dimension == "model":
+        dim_values = ["gpt-4-1106-preview"] # "gpt-3.5-turbo-1106"
+        other_dim_kwargs = {
+            "use_task_specific_instructions": True,
+            "do_semantic_selection": False,
+            "num_prompt_training_examples": 20,
+        }
     else:
         raise ValueError(f"test_dimension {test_dimension} not recognized")
 
@@ -93,6 +100,9 @@ def loo_test(
             labels = list(range(1, dataset.features["Label"].num_classes))
             predictions = []
             test_output = {}
+            
+            if config == "one_stop_english":
+                other_dim_kwargs["num_prompt_training_examples"] = 10
                         
             extra_kwargs = {
                 "config": config,
@@ -140,6 +150,9 @@ def make_output_entry(label, output_probs, output):
 
 def save_output(test_output, config, dim_value):
     # get file from observer
+    dir = os.path.join(observer.dir, "test_outputs", str(dim_value))
+    if not os.path.isdir(dir):
+        os.makedirs(dir)
     dir = os.path.join(observer.dir, "test_outputs", str(dim_value))
     if not os.path.isdir(dir):
         os.makedirs(dir)

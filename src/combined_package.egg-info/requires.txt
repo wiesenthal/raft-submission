@@ -1,5 +1,5 @@
 scipy
-scikit-learn==0.24.2
+scikit-learn
 datasets>=2.3.0
 transformers
 openai

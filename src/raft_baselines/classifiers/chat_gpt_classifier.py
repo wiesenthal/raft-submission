@@ -61,23 +61,18 @@ class ChatGPTClassifier(InContextClassifier):
             0
         ]
         
-        print(self.device)
-
         sorted_indices = torch.argsort(-similarity_scores.to(self.device))
         return self.training_data.select(
             list(reversed(sorted_indices[: self.num_prompt_training_examples]))
         )
 
     def does_token_match_class(self, token: str, clas: str) -> bool:
-        # prepend a space to the class label
-        # because we always expect a leading space in the first token
-        # returned from the OpenAI API, given our prompt format
         clas_str = (
-            f" {clas}" if not self.add_prefixes else f" {self.classes.index(clas) + 1}"
+            f"{clas}" if not self.add_prefixes else f"{self.classes.index(clas) + 1}"
         )
         
         clas_first_token_id: int = self.tokenizer(clas_str)[0]
-        token_id: int = self.tokenizer(token)[0]        
+        token_id: int = self.tokenizer(token)[0]    
 
         # Compare token ids rather than the raw tokens
         # because GPT2TokenizerFast represents some special characters
@@ -170,14 +165,14 @@ class ChatGPTClassifier(InContextClassifier):
         logit_bias = {}
         for clas in self.classes:
             clas_str = (
-                f" {clas}"
+                f"{clas}"
                 if not self.add_prefixes
-                else f" {self.classes.index(clas) + 1}"
+                else f"{self.classes.index(clas) + 1}"
             )
 
             clas_first_token_id: int = self.tokenizer(clas_str)[0]
             logit_bias[clas_first_token_id] = 100.0
-        
+                
         response = chat_complete(
             prompt,
             temperature=0.0,
@@ -186,18 +181,21 @@ class ChatGPTClassifier(InContextClassifier):
             logit_bias=logit_bias,
             n=self.num_responses,
         )
+                
+        print(f"prompt_tokens: {response.usage.prompt_tokens}, completion_tokens: {response.usage.completion_tokens}")
         
         choice_count: Mapping[str, int] = defaultdict(int)
         num_choices = len(response.choices)
         for choice in response.choices:
             choice_count[choice.message.content] += 1
-        
+                
         raw_p = []
         for clas in self.classes:
             p = 0.0
             for choice, count in choice_count.items():
                 if self.does_token_match_class(choice, clas):
                     p += count / num_choices
+                
             raw_p.append(p)
 
         return raw_p

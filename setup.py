@@ -8,7 +8,7 @@ description = "Combined package for RAFT Benchmarks baselines and SetFit"
 # Requirements
 install_requires = [
     "scipy",
-    "scikit-learn==0.24.2",
+    "scikit-learn",
     "datasets>=2.3.0",
     "transformers",
     "openai",
