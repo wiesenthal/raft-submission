@@ -26,7 +26,7 @@ Set up a virtual environament and install necessary requirements from the requir
 
 ```buildoutcfg
 conda create -n raft-baselines python=3.8 && conda activate raft-baselines
-python -m pip install -r requirements.txt
+pip install -e '.[dev]'
 ```
 
 Install raft-baselines.
