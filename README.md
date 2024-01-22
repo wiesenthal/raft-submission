@@ -15,6 +15,8 @@ I compared the predictions from the modified SetFit and the T-Few models and
 
 This approach essentially takes a vote between the three classifiers which I found to significantly improve performance in cross-validation. Plus, it saves me money in openAI credits.
 
+---
+# ~~~ Raft Baselines README ~~~
 
 # Setup
 
