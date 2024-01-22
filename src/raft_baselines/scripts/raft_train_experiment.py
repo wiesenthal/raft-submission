@@ -19,14 +19,15 @@ raft_experiment.observers.append(observer)
 
 @raft_experiment.config
 def base_config():
-    classifier_name = "ChatGPTClassifier"
+    classifier_name = "SetFitClassifier"
     classifier_kwargs = {
         "model_type": "sentence-transformers/paraphrase-mpnet-base-v2",
     }
     configs = datasets.get_dataset_config_names("ought/raft")
-    configs.remove("ade_corpus_v2")
+    # configs.remove("ade_corpus_v2")
     configs.remove("banking_77")
-    configs.remove("terms_of_service")
+    configs.remove("systematic_review_inclusion")
+    # configs.remove("terms_of_service")
     
     # controls which dimension is tested, out of the 3 reported in the paper
     # Other options: do_semantic_selection and num_prompt_training_examples
@@ -67,8 +68,8 @@ def loo_test(
         other_dim_kwargs = {
             "use_task_specific_instructions": True,
             "do_semantic_selection": True,
-            
         }
+        
     elif test_dimension == "similarity_embedder_type":
         dim_values = ["sentence_transformers", "openai"]
         other_dim_kwargs = {
