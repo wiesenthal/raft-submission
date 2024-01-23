@@ -14,6 +14,7 @@ I compared the predictions from the modified SetFit and the T-Few models and
 - if they disagreed: I used my GPT classifier implementation with GPT-4 as the tiebreaker (using in-context learning with the message history created out of the training examples)
 
 This approach essentially takes a vote between the three classifiers which I found to significantly improve performance in cross-validation. Plus, it saves me money in openAI credits.
+![my raft drawio](https://github.com/wiesenthal/raft-submission/assets/26258920/98c39f4d-78a9-40a7-80a1-2bf02ef4a2b0)
 
 ---
 # ~~~ Raft Baselines README ~~~
